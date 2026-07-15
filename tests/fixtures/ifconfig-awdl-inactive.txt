@@ -1,0 +1,3 @@
+awdl0: flags=8802<BROADCAST,SIMPLEX,MULTICAST> mtu 1500
+	ether 12:34:56:78:9a:bc
+	status: inactive

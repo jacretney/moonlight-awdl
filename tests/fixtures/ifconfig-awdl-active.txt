@@ -1,0 +1,3 @@
+awdl0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+	ether 12:34:56:78:9a:bc
+	status: active
