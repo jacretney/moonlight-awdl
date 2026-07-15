@@ -34,13 +34,42 @@ export async function canOverwriteSudoers(path = SUDOERS_PATH): Promise<boolean>
   }
 }
 
+export async function canOverwriteSudoersWithPrivilege(
+  runner: CommandRunner,
+  path = SUDOERS_PATH,
+): Promise<boolean> {
+  try {
+    const info = await Deno.lstat(path);
+    if (!info.isFile || info.isSymlink) return false;
+    return isOwnedSudoersContent(await readSudoersContent(path, runner));
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return true;
+    throw error;
+  }
+}
+
+async function readSudoersContent(path: string, runner: CommandRunner): Promise<string> {
+  try {
+    return await Deno.readTextFile(path);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+    const result = await runner.run("/usr/bin/sudo", ["/bin/cat", path]);
+    if (result.code !== 0) {
+      throw new Error(
+        `Could not inspect ${path}: ${result.stderr.trim() || "sudo /bin/cat failed"}`,
+      );
+    }
+    return result.stdout;
+  }
+}
+
 export async function validateSudoersFile(path: string, runner: CommandRunner): Promise<void> {
   const result = await runner.run("/usr/sbin/visudo", ["-cf", path]);
   if (result.code !== 0) throw new Error(`visudo rejected sudoers file: ${result.stderr.trim()}`);
 }
 
 export async function installSudoers(user: string, runner: CommandRunner): Promise<void> {
-  if (!await canOverwriteSudoers()) {
+  if (!await canOverwriteSudoersWithPrivilege(runner)) {
     throw new Error(`${SUDOERS_PATH} exists but is not owned by moonlight-awdl`);
   }
   const tempFile = await Deno.makeTempFile({ prefix: "moonlight-awdl-sudoers-" });
@@ -68,7 +97,7 @@ export async function installSudoers(user: string, runner: CommandRunner): Promi
 
 export async function removeSudoers(runner: CommandRunner): Promise<void> {
   if (!await isRegularFile(SUDOERS_PATH)) return;
-  if (!isOwnedSudoersContent(await Deno.readTextFile(SUDOERS_PATH))) {
+  if (!isOwnedSudoersContent(await readSudoersContent(SUDOERS_PATH, runner))) {
     throw new Error(`${SUDOERS_PATH} is not a moonlight-awdl file; refusing to remove it`);
   }
   const result = await runner.run("/usr/bin/sudo", ["/bin/rm", SUDOERS_PATH]);
