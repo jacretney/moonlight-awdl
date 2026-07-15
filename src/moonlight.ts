@@ -58,8 +58,23 @@ export async function findMoonlightProcesses(runner: CommandRunner): Promise<Moo
   return processes;
 }
 
-export async function launchMoonlight(path: string, runner: CommandRunner): Promise<void> {
-  const result = await runner.run("/usr/bin/open", [path]);
+export interface LaunchMoonlightOptions {
+  disableMetal?: boolean;
+}
+
+export function moonlightOpenArgs(
+  path: string,
+  options: LaunchMoonlightOptions = {},
+): string[] {
+  return options.disableMetal ? ["--env", "VT_FORCE_METAL=0", path] : [path];
+}
+
+export async function launchMoonlight(
+  path: string,
+  runner: CommandRunner,
+  options: LaunchMoonlightOptions = {},
+): Promise<void> {
+  const result = await runner.run("/usr/bin/open", moonlightOpenArgs(path, options));
   if (result.code !== 0) throw new Error(`Failed to launch Moonlight: ${result.stderr.trim()}`);
 }
 

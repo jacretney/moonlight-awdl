@@ -36,3 +36,11 @@ export class Logger {
     }
   }
 }
+
+export function timestampPrefix(date = new Date()): string {
+  return date.toISOString();
+}
+
+export function logLine(message: string): void {
+  console.log(`${timestampPrefix()} ${message}`);
+}

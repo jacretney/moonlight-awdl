@@ -56,6 +56,7 @@ for a password.
 ```sh
 moonlight-awdl setup
 moonlight-awdl run
+moonlight-awdl run --disable-metal
 moonlight-awdl status
 moonlight-awdl doctor
 moonlight-awdl restore
@@ -70,6 +71,16 @@ Running without arguments prints help.
 `run` records the initial AWDL state, disables AWDL if it was enabled, launches or attaches to
 Moonlight, keeps AWDL disabled with a watchdog, then restores AWDL only if this launcher disabled
 it.
+
+Use `--disable-metal` to launch Moonlight with `VT_FORCE_METAL=0`:
+
+```sh
+moonlight-awdl run --disable-metal
+```
+
+If Moonlight is already running and the launcher attaches to it, this flag cannot change that
+existing process. Quit Moonlight first, or set `attachToExisting` to `false`, if you need a fresh
+launch with Metal disabled.
 
 ## Configuration
 

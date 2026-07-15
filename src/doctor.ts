@@ -45,11 +45,15 @@ export async function runDoctor(
     "running check",
   );
   add("configuration", await pathExists(paths.configPath) ? "pass" : "warn", paths.configPath);
-  add(
-    "sudoers ownership marker",
-    await canOverwriteSudoers(SUDOERS_PATH) ? "pass" : "fail",
-    SUDOERS_PATH,
-  );
+  try {
+    add(
+      "sudoers ownership marker",
+      await canOverwriteSudoers(SUDOERS_PATH) ? "pass" : "fail",
+      SUDOERS_PATH,
+    );
+  } catch (error) {
+    add("sudoers ownership marker", "warn", sudoersReadErrorDetail(error));
+  }
   try {
     await validateSudoersFile(SUDOERS_PATH, runner);
     add("sudoers syntax", "pass", SUDOERS_PATH);
@@ -63,6 +67,13 @@ export async function runDoctor(
   add("session lock", lock ? "warn" : "pass", lock ? `PID ${lock.pid}` : "none");
   add("watchdog", config.watchdogEnabled ? "pass" : "warn", `${config.watchdogIntervalMs} ms`);
   return checks;
+}
+
+function sudoersReadErrorDetail(error: unknown): string {
+  if (error instanceof Deno.errors.PermissionDenied) {
+    return `${SUDOERS_PATH} is not readable by this user; run setup/status checks without sudo where possible, or run doctor with sudo for file marker inspection.`;
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 export function printDoctor(checks: CheckResult[], json = false): void {

@@ -13,6 +13,7 @@ import { clearSessionState } from "./state.ts";
 export async function main(args: string[]): Promise<void> {
   const json = args.includes("--json");
   const yes = args.includes("--yes");
+  const disableMetal = args.includes("--disable-metal");
   const moonlightArg = valueAfter(args, "--moonlight-path");
   const command = args.find((arg) => !arg.startsWith("--"));
   const paths = getAppPaths();
@@ -59,7 +60,7 @@ export async function main(args: string[]): Promise<void> {
       if (!await validateMoonlightPath(config.moonlightPath)) {
         throw new Error(`Invalid Moonlight path: ${config.moonlightPath}`);
       }
-      await runManagedSession({ config, paths, runner, logger });
+      await runManagedSession({ config, paths, runner, logger, disableMetal });
       break;
     }
     case "status": {
@@ -146,7 +147,7 @@ function printHelp(): void {
 
 Usage:
   moonlight-awdl setup [--moonlight-path /Applications/Moonlight.app]
-  moonlight-awdl run [--verbose]
+  moonlight-awdl run [--disable-metal] [--verbose]
   moonlight-awdl status [--json]
   moonlight-awdl doctor [--json]
   moonlight-awdl restore
