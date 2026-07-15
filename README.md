@@ -1,0 +1,240 @@
+# moonlight-awdl
+
+A small terminal-based macOS launcher for Moonlight that temporarily disables Apple Wireless Direct
+Link (`awdl0`) while Moonlight is running.
+
+Some macOS users see severe periodic Moonlight audio/video stuttering that immediately clears after:
+
+```sh
+sudo /sbin/ifconfig awdl0 down
+```
+
+This tool automates that workaround for a managed Moonlight session. It does not claim to fix every
+Moonlight streaming issue.
+
+## What AWDL Is
+
+AWDL is Apple Wireless Direct Link. It supports peer-to-peer Apple features such as AirDrop,
+Handoff, Sidecar, Universal Control, some AirPlay behavior, and nearby-device discovery. Those
+features may be unavailable while `moonlight-awdl run` is managing a Moonlight session.
+
+## Install And Setup
+
+Install Deno 2.x, then run from source:
+
+```sh
+deno task dev setup
+deno task dev run
+```
+
+Or compile a standalone executable:
+
+```sh
+deno task compile
+./dist/moonlight-awdl setup
+./dist/moonlight-awdl run
+```
+
+`setup` finds Moonlight, explains the AWDL trade-off, and installs this sudoers file:
+
+```text
+/etc/sudoers.d/moonlight-awdl
+```
+
+The rule grants passwordless access only to these exact commands for the detected console user:
+
+```text
+/sbin/ifconfig awdl0 down
+/sbin/ifconfig awdl0 up
+```
+
+The administrator password may be requested once during setup. After setup, `run` should not prompt
+for a password.
+
+## Usage
+
+```sh
+moonlight-awdl setup
+moonlight-awdl run
+moonlight-awdl status
+moonlight-awdl doctor
+moonlight-awdl restore
+moonlight-awdl uninstall
+moonlight-awdl config show
+moonlight-awdl config set watchdogIntervalMs 3000
+moonlight-awdl config set watchdog true
+```
+
+Running without arguments prints help.
+
+`run` records the initial AWDL state, disables AWDL if it was enabled, launches or attaches to
+Moonlight, keeps AWDL disabled with a watchdog, then restores AWDL only if this launcher disabled
+it.
+
+## Configuration
+
+Non-sensitive config is stored at:
+
+```text
+~/Library/Application Support/moonlight-awdl/config.json
+```
+
+Default config:
+
+```json
+{
+  "version": 1,
+  "moonlightPath": "/Applications/Moonlight.app",
+  "watchdogEnabled": true,
+  "watchdogIntervalMs": 3000,
+  "attachToExisting": true,
+  "verbose": false
+}
+```
+
+Logs are capped and stored under:
+
+```text
+~/Library/Logs/moonlight-awdl/
+```
+
+## Security Design
+
+The executable runs as the normal user. It never stores passwords and never constructs shell command
+strings. Privileged work is limited to direct `Deno.Command` calls with fixed argument arrays.
+
+The sudoers rule does not permit arbitrary `ifconfig` use or arbitrary root commands. Moonlight
+paths are treated as unprivileged data and never influence privileged command construction.
+
+Remove the sudoers file with:
+
+```sh
+moonlight-awdl uninstall
+```
+
+## Failure Recovery
+
+Normal Moonlight exit and handled signals restore AWDL when this launcher disabled it. `SIGKILL`,
+power loss, or a hard crash can prevent cleanup.
+
+If AWDL remains disabled, run:
+
+```sh
+moonlight-awdl restore
+```
+
+On startup, `run` checks for stale session state and performs a safe restore when Moonlight is no
+longer running and the previous session recorded that it disabled AWDL.
+
+## Troubleshooting
+
+Moonlight not detected:
+
+```sh
+moonlight-awdl setup --moonlight-path /Applications/Moonlight.app
+```
+
+Password prompt during `run`:
+
+```sh
+moonlight-awdl doctor
+moonlight-awdl setup
+```
+
+Invalid sudoers rule:
+
+```sh
+sudo /usr/sbin/visudo -cf /etc/sudoers.d/moonlight-awdl
+moonlight-awdl uninstall
+moonlight-awdl setup
+```
+
+`awdl0` missing means the current Mac or network configuration is not exposing that interface.
+
+If AWDL immediately re-enables, keep the watchdog enabled or lower the interval, with a minimum of
+1000 ms:
+
+```sh
+moonlight-awdl config set watchdog true
+moonlight-awdl config set watchdogIntervalMs 1000
+```
+
+If Moonlight is already running, the launcher attaches by default. Disable that behavior with:
+
+```sh
+moonlight-awdl config set attachToExisting false
+```
+
+For stale locks, confirm no launcher is active, then remove:
+
+```sh
+rm ~/Library/Application\ Support/moonlight-awdl/session.lock
+```
+
+If AirDrop does not work after a crash:
+
+```sh
+moonlight-awdl restore
+```
+
+Manual uninstall fallback:
+
+```sh
+moonlight-awdl restore
+sudo rm /etc/sudoers.d/moonlight-awdl
+rm -rf ~/Library/Application\ Support/moonlight-awdl
+rm -rf ~/Library/Logs/moonlight-awdl
+```
+
+## Build And Release
+
+Local build:
+
+```sh
+deno task check
+deno task lint
+deno task test
+deno task compile
+```
+
+Release outputs:
+
+```sh
+deno task release
+```
+
+This writes:
+
+```text
+dist/moonlight-awdl-arm64
+dist/moonlight-awdl-x86_64
+dist/SHA256SUMS
+```
+
+The release task uses `deno compile --target aarch64-apple-darwin` and
+`--target x86_64-apple-darwin`. If cross-compilation fails for a Deno release, build each
+architecture on native hardware.
+
+If both outputs are compatible, you can create a universal binary manually:
+
+```sh
+lipo -create -output dist/moonlight-awdl-universal dist/moonlight-awdl-arm64 dist/moonlight-awdl-x86_64
+```
+
+## Manual Integration Checklist
+
+- Fresh `setup`
+- Normal launch and exit
+- Moonlight already running
+- Ctrl+C during a session
+- Moonlight crash
+- AWDL manually re-enabled during a session
+- Reboot or forced launcher termination followed by `restore`
+- `uninstall`
+- AirDrop unavailable during streaming and restored afterward
+
+## Scope And Disclaimer
+
+This project is unofficial and is not affiliated with Moonlight, Sunshine, Apple, or Deno. It
+temporarily changes a system network interface. Review the source and sudoers rule before
+installing.
