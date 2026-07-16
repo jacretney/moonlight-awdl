@@ -5,10 +5,10 @@ Link (`awdl0`) while Moonlight is running.
 
 ## Read This First
 
-This is an unofficial workaround for a specific macOS/Moonlight stuttering issue. It is not
+This is an unofficial workaround that temporarily changes a macOS network interface. It is not
 affiliated with Moonlight, Sunshine, Apple, or Deno.
 
-Before running it, understand what it changes:
+Before running `moonlight-awdl`, you should understand what it changes:
 
 - It temporarily disables the macOS `awdl0` network interface while Moonlight is running.
 - It installs a sudoers rule at `/etc/sudoers.d/moonlight-awdl`.
@@ -23,20 +23,45 @@ Before running it, understand what it changes:
 Review the source and the exact sudoers rule before installing. Do not run this if you are not
 comfortable with a tool temporarily changing a system network interface.
 
-Some macOS users see severe periodic Moonlight audio/video stuttering that immediately clears after:
+## The Moonlight Issue
+
+Some macOS users (like myself) see severe periodic Moonlight audio/video stuttering, especially on Wi-Fi. The
+stream can be otherwise healthy, then audio and video repeatedly hitch or freeze. For affected
+users, the stuttering immediately clears after disabling AWDL:
 
 ```sh
 sudo /sbin/ifconfig awdl0 down
 ```
 
-This tool automates that workaround for a managed Moonlight session. It does not claim to fix every
-Moonlight streaming issue.
+That manual command is the workaround this project automates. This does not claim to fix every
+Moonlight streaming issue; it is only for the class of problems that improve when `awdl0` is
+disabled.
 
 ## What AWDL Is
 
 AWDL is Apple Wireless Direct Link. It supports peer-to-peer Apple features such as AirDrop,
 Handoff, Sidecar, Universal Control, some AirPlay behavior, and nearby-device discovery. Those
 features may be unavailable while `moonlight-awdl run` is managing a Moonlight session.
+
+AWDL can periodically use the Wi-Fi radio for peer-to-peer discovery and nearby-device traffic. On
+some setups, that appears to interfere with latency-sensitive Moonlight streaming enough to cause
+audio/video stalls. Disabling `awdl0` removes that source of Wi-Fi activity during the stream, at
+the cost of temporarily disabling the Apple features above.
+
+## What This Tool Automates
+
+You can run the manual `ifconfig` command yourself, but macOS may re-enable AWDL later, and it is
+easy to forget to turn it back on. This launcher manages the full session:
+
+- Detects Moonlight.
+- Installs a narrowly scoped sudoers rule for only `awdl0 down` and `awdl0 up`.
+- Disables AWDL before launching or attaching to Moonlight.
+- Watches for macOS re-enabling AWDL and disables it again.
+- Restores AWDL when Moonlight exits, but only if this launcher disabled it.
+- Provides `doctor`, `status`, `restore`, and `uninstall` commands for diagnostics and recovery.
+
+To do that, it requires Deno for source usage or a compiled executable, one administrator approval
+during `setup`, and the sudoers rule described above.
 
 ## Install And Setup
 
