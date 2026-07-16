@@ -25,9 +25,9 @@ comfortable with a tool temporarily changing a system network interface.
 
 ## The Moonlight Issue
 
-Some macOS users (like myself) see severe periodic Moonlight audio/video stuttering, especially on Wi-Fi. The
-stream can be otherwise healthy, then audio and video repeatedly hitch or freeze. For affected
-users, the stuttering immediately clears after disabling AWDL:
+Some macOS users (like myself) see severe periodic Moonlight audio/video stuttering, especially on
+Wi-Fi. The stream can be otherwise healthy, then audio and video repeatedly hitch or freeze. For
+affected users, the stuttering immediately clears after disabling AWDL:
 
 ```sh
 sudo /sbin/ifconfig awdl0 down
@@ -65,14 +65,47 @@ during `setup`, and the sudoers rule described above.
 
 ## Install And Setup
 
-Install Deno 2.x, then run from source:
+### Option 1: Download A Release
+
+Download the latest macOS executable from:
+
+```text
+https://github.com/jacretney/moonlight-awdl/releases/latest
+```
+
+Choose the binary for your Mac:
+
+- Apple Silicon: `moonlight-awdl-arm64`
+- Intel: `moonlight-awdl-x86_64`
+
+Then make it executable and run setup:
+
+```sh
+chmod +x ./moonlight-awdl-arm64
+./moonlight-awdl-arm64 setup
+./moonlight-awdl-arm64 run
+```
+
+For Intel Macs, use `moonlight-awdl-x86_64` in the commands above.
+
+You can verify the download with `SHA256SUMS` from the same release:
+
+```sh
+shasum -a 256 -c SHA256SUMS
+```
+
+### Option 2: Run From Source
+
+Install Deno 2.x, then run:
 
 ```sh
 deno task dev setup
 deno task dev run
 ```
 
-Or compile a standalone executable:
+### Option 3: Build From Source
+
+Compile a standalone executable locally:
 
 ```sh
 deno task compile
@@ -276,6 +309,19 @@ If both outputs are compatible, you can create a universal binary manually:
 ```sh
 lipo -create -output dist/moonlight-awdl-universal dist/moonlight-awdl-arm64 dist/moonlight-awdl-x86_64
 ```
+
+GitHub releases are published automatically when a tag is pushed:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow runs formatting, linting, type checks, tests, then uploads:
+
+- `moonlight-awdl-arm64`
+- `moonlight-awdl-x86_64`
+- `SHA256SUMS`
 
 ## Manual Integration Checklist
 
