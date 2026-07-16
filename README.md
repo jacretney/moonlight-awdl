@@ -3,6 +3,26 @@
 A small terminal-based macOS launcher for Moonlight that temporarily disables Apple Wireless Direct
 Link (`awdl0`) while Moonlight is running.
 
+## Read This First
+
+This is an unofficial workaround for a specific macOS/Moonlight stuttering issue. It is not
+affiliated with Moonlight, Sunshine, Apple, or Deno.
+
+Before running it, understand what it changes:
+
+- It temporarily disables the macOS `awdl0` network interface while Moonlight is running.
+- It installs a sudoers rule at `/etc/sudoers.d/moonlight-awdl`.
+- That rule allows your user to run only these two commands without a password:
+  - `/sbin/ifconfig awdl0 down`
+  - `/sbin/ifconfig awdl0 up`
+- While `awdl0` is disabled, Apple nearby-device features such as AirDrop, Handoff, Sidecar,
+  Universal Control, and some AirPlay behavior may stop working.
+- The app tries to restore AWDL on normal exit, but hard termination, power loss, or `SIGKILL` can
+  prevent cleanup. Use `moonlight-awdl restore` if AWDL remains disabled.
+
+Review the source and the exact sudoers rule before installing. Do not run this if you are not
+comfortable with a tool temporarily changing a system network interface.
+
 Some macOS users see severe periodic Moonlight audio/video stuttering that immediately clears after:
 
 ```sh
@@ -244,8 +264,7 @@ lipo -create -output dist/moonlight-awdl-universal dist/moonlight-awdl-arm64 dis
 - `uninstall`
 - AirDrop unavailable during streaming and restored afterward
 
-## Scope And Disclaimer
+## Scope
 
-This project is unofficial and is not affiliated with Moonlight, Sunshine, Apple, or Deno. It
-temporarily changes a system network interface. Review the source and sudoers rule before
-installing.
+This project is intentionally small: no native app, no auto-updater, no telemetry, and no network
+access. It exists only to automate the AWDL workaround during a managed Moonlight session.
