@@ -60,7 +60,7 @@ export async function runManagedSession(options: ManagedSessionOptions): Promise
   const { config, paths, runner, logger, disableMetal = false } = options;
   await acquireLock(paths);
   let disabledAwdl = false;
-  let watchdogTimer: number | undefined;
+  let watchdogTimer: ReturnType<typeof setInterval> | undefined;
   let shuttingDown = false;
 
   const stopWatchdog = () => {
